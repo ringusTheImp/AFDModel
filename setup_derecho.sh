@@ -42,22 +42,35 @@ fi
 conda activate "$CONDA_ENV"
 echo "  Activated: $(python --version)"
 
-# ---- 3. Pip installs ----
+# ---- 3. Clean corrupted packages ----
+echo ""
+echo ">>> Cleaning corrupted package metadata..."
+SITE_PKGS="$(python -c 'import site; print(site.getsitepackages()[0])')"
+for d in "$SITE_PKGS"/~*; do
+    [ -e "$d" ] && rm -rf "$d" && echo "  Removed $d"
+done
+
+# ---- 4. Pip installs ----
 echo ""
 echo ">>> Installing packages..."
+
+# Keep pip temp and cache on scratch to avoid cross-device link errors
+export TMPDIR="/glade/derecho/scratch/$USER/tmp"
+mkdir -p "$TMPDIR"
+
 pip install --quiet torch --index-url https://download.pytorch.org/whl/cu121
 pip install --quiet axolotl==0.14.0
-pip install --quiet flash-attn --no-build-isolation
+pip install --quiet flash-attn --no-build-isolation --no-cache-dir
 pip install --quiet rouge-score bert-score sacrebleu tqdm
 echo "  Packages installed."
 
-# ---- 4. Directory structure ----
+# ---- 5. Directory structure ----
 echo ""
 echo ">>> Creating directory structure..."
 mkdir -p "$WX_AFD_ROOT"/{data,configs,output,eval,scripts,logs}
 echo "  Directories created at $WX_AFD_ROOT"
 
-# ---- 5. Copy data and configs (skip if already present) ----
+# ---- 6. Copy data and configs (skip if already present) ----
 echo ""
 echo ">>> Copying project files..."
 
@@ -95,7 +108,7 @@ if [ -f "$src" ]; then
     cp -n "$src" "$dst" 2>/dev/null && echo "  Copied wx_afd.py" || echo "  wx_afd.py already exists, skipped."
 fi
 
-# ---- 6. (Optional) Pre-download model ----
+# ---- 7. (Optional) Pre-download model ----
 echo ""
 echo ">>> Pre-downloading model (compute nodes may lack internet)..."
 if command -v huggingface-cli &>/dev/null; then
@@ -106,7 +119,7 @@ else
     echo "  Install with: pip install huggingface_hub[cli]"
 fi
 
-# ---- 7. Verification ----
+# ---- 8. Verification ----
 echo ""
 echo "=========================================="
 echo "  Verification"
