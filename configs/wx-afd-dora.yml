@@ -34,7 +34,7 @@ datasets:
     type: chat_template
     roles_to_train:
       - assistant                 # Loss only on AFD output, not weather input
-    train_on_eos: true            # Learn to stop generating
+    train_on_eos: "last"          # Learn to stop generating
 
 val_set_size: 0                   # We use a pre-split val set
 test_datasets:
