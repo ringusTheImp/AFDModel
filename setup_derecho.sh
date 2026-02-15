@@ -93,7 +93,7 @@ if [ -f "$src" ]; then
 fi
 
 # Scripts
-for f in evaluate.py generate.py train.pbs eval.pbs; do
+for f in evaluate.py generate.py; do
     src="$SOURCE_DIR/scripts/$f"
     dst="$WX_AFD_ROOT/scripts/$f"
     if [ -f "$src" ]; then
@@ -169,5 +169,5 @@ fi
 echo ""
 echo "=========================================="
 echo "  Setup complete!"
-echo "  Next: qsub scripts/train.pbs"
+echo "  Next: accelerate launch -m axolotl.cli.train configs/wx-afd-dora.yml"
 echo "=========================================="

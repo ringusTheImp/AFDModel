@@ -27,7 +27,7 @@ NWS forecasters at WFO Louisville (LMK) write Area Forecast Discussions (AFDs) m
 | **Total tokens** | ~4.8M training tokens |
 | **Location** | `/mnt/user-data/outputs/wx-dataset-derecho/` |
 | **Files** | `data/train.jsonl`, `data/val.jsonl` |
-| **Compute** | NCAR Derecho — PBS-managed A100 40GB GPU nodes |
+| **Compute** | NCAR Derecho — A100 40GB GPU nodes |
 
 ---
 
@@ -88,16 +88,8 @@ We're committing to this. No hedging.
 | **GPU** | NVIDIA A100 40GB (4 per node, NVLink 600 GB/s) |
 | **CPU** | 64× AMD Milan cores per node |
 | **RAM** | 512 GB system memory per node |
-| **Scheduler** | PBS Pro |
+| **Access** | Direct login to compute nodes |
 | **CUDA** | 12.2.1 (via `module load cuda/12.2.1`) |
-
-**Queue strategy:**
-
-| Phase | Queue | Why |
-|-------|-------|-----|
-| Config debugging | `develop` | Shared nodes, per-GPU billing, short walltime |
-| Hyperparameter search | `preempt` | 0.2× cost, implement checkpoint saving every 100 steps |
-| Final training runs | `main` | Full-node exclusive, charged for all 4 GPUs regardless |
 
 Single-GPU training. Qwen3-4B in 4-bit QLoRA uses ~4.2 GB VRAM — leaves ~36 GB headroom on A100 40GB. We could run 16-bit LoRA (~10 GB) with room to spare. We'll use **bf16 LoRA (not quantized)** since we have the VRAM budget.
 
@@ -323,7 +315,6 @@ python -c "import axolotl; print(axolotl.__version__)"
 │   ├── generated/               # Model-generated AFDs
 │   └── scores/                  # Metric results
 ├── scripts/
-│   ├── train.pbs                # PBS job script
 │   ├── evaluate.py              # Evaluation pipeline
 │   └── generate.py              # Inference script
 └── tests/
@@ -336,23 +327,9 @@ python -c "import axolotl; print(axolotl.__version__)"
 
 ### Phase 3: Sanity Check (Day 1-2)
 
-Before submitting a real training job, validate everything works:
+Before running a real training job, validate everything works:
 
 ```bash
-#PBS -N wx-afd-sanity
-#PBS -A <project_code>
-#PBS -q develop
-#PBS -l walltime=00:30:00
-#PBS -l select=1:ncpus=8:ngpus=1
-#PBS -j oe
-
-module purge
-module load ncarenv/23.09 cuda/12.2.1 conda
-conda activate wx-afd
-
-export TMPDIR=/glade/derecho/scratch/$USER/tmpdir
-mkdir -p $TMPDIR
-
 # Validate config and data loading (no training)
 accelerate launch -m axolotl.cli.train configs/wx-afd-dora.yml \
     --debug \
@@ -370,53 +347,19 @@ accelerate launch -m axolotl.cli.train configs/wx-afd-dora.yml \
 
 ### Phase 4: Training (Days 2-3)
 
-**PBS job script (`train.pbs`):**
-
 ```bash
-#!/bin/bash
-#PBS -N wx-afd-train
-#PBS -A <project_code>
-#PBS -q preempt
-#PBS -l walltime=06:00:00
-#PBS -l select=1:ncpus=64:ngpus=1
-#PBS -l job_priority=regular
-#PBS -j oe
-#PBS -o /glade/derecho/scratch/$USER/wx-afd/logs/train_${PBS_JOBID}.log
-
-module purge
-module load ncarenv/23.09 cuda/12.2.1 conda
-conda activate wx-afd
-
-export TMPDIR=/glade/derecho/scratch/$USER/tmpdir
-mkdir -p $TMPDIR
-
-cd /glade/derecho/scratch/$USER/wx-afd
-
-# Print environment info
-python -c "
-import torch
-print(f'PyTorch: {torch.__version__}')
-print(f'CUDA: {torch.version.cuda}')
-print(f'GPU: {torch.cuda.get_device_name(0)}')
-print(f'VRAM: {torch.cuda.get_device_properties(0).total_mem / 1e9:.1f} GB')
-"
-
 # Launch training
 accelerate launch -m axolotl.cli.train configs/wx-afd-dora.yml
-
-echo "Training complete. Best model saved to output/"
 ```
-
-**Submit:** `qsub scripts/train.pbs`
 
 **Expected timeline:**
 - ~2,287 examples ÷ effective batch 16 = ~143 steps/epoch
 - 3 epochs = ~429 total steps
 - With packing and bf16 on A100: ~15-25 minutes per epoch
-- **Total: ~45-75 minutes of GPU time** (plus queue wait)
+- **Total: ~45-75 minutes of GPU time**
 - Early stopping may terminate after epoch 2
 
-**Using `preempt` queue at 0.2× cost.** The checkpoint saves every 100 steps protect against preemption. If the job gets killed, resume from latest checkpoint:
+The checkpoint saves every 100 steps protect against interruption. If training is interrupted, resume from latest checkpoint:
 
 ```bash
 accelerate launch -m axolotl.cli.train configs/wx-afd-dora.yml \
@@ -505,34 +448,22 @@ python scripts/evaluate.py \
 
 The script generates AFDs for all validation examples, computes ROUGE-1/2/L, BERTScore, and format compliance, then saves results to `eval/<tag>/scores/metrics.json`.
 
-### 7.5 Evaluation PBS Job
+### 7.5 Evaluation Commands
 
 ```bash
-#!/bin/bash
-#PBS -N wx-afd-eval
-#PBS -A <project_code>
-#PBS -q develop
-#PBS -l walltime=02:00:00
-#PBS -l select=1:ncpus=8:ngpus=1
-#PBS -j oe
-
-module purge
-module load ncarenv/23.09 cuda/12.2.1 conda
-conda activate wx-afd
-
-cd /glade/derecho/scratch/$USER/wx-afd
-
 # Evaluate fine-tuned model
 python scripts/evaluate.py \
-    --model /glade/work/$USER/wx-afd-model-v1 \
+    --model output/merged \
     --val_data data/val.jsonl \
-    --output_dir eval/finetuned/
+    --tag finetuned \
+    --output_dir eval/finetuned
 
 # Evaluate zero-shot baseline (same model, no fine-tuning)
 python scripts/evaluate.py \
     --model Qwen/Qwen3-4B-Instruct-2507 \
     --val_data data/val.jsonl \
-    --output_dir eval/zero-shot/
+    --tag zero-shot \
+    --output_dir eval/zero-shot
 ```
 
 ### 7.6 Success Criteria
@@ -559,7 +490,7 @@ If ROUGE-L doesn't improve over zero-shot, the fine-tuning failed and we investi
 | **EOS token misconfiguration** | High (default is wrong) | Critical — infinite generation | Explicit `eos_token` in config + sanity check in Phase 3 |
 | **Overfitting (memorization)** | Medium | Model regurgitates training examples | DoRA rank 16 + dropout 0.05 + early stopping + eval on held-out set |
 | **Catastrophic forgetting** | Low | Model loses general language ability | LoRA constrains updates to 0.7% of params; base weights frozen |
-| **Preempt queue job killed** | High (by design) | Lost training progress | Checkpoint every 100 steps + resume support |
+| **Training interrupted** | Low | Lost training progress | Checkpoint every 100 steps + resume support |
 | **Hallucinated weather data** | Medium | Dangerous in operational context | AlignScore eval + entity extraction + human review |
 | **Sample packing label corruption** | Low | Wrong tokens trained on | Axolotl's native packing handles label alignment; verify in sanity check |
 | **Qwen3-4B-Instruct-2507 model update** | Low | Breaking changes | Pin to specific HF revision hash in config |
