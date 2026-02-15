@@ -20,7 +20,7 @@ echo "=========================================="
 echo ""
 echo ">>> Loading modules..."
 module purge
-module load ncarenv/23.09 cuda/12.2.1
+module load ncarenv/24.12 cuda/12.2.1
 module load conda
 echo "  Modules loaded."
 

@@ -8,7 +8,7 @@
 #PBS -o /glade/derecho/scratch/$USER/wx-afd/logs/eval.log
 
 module purge
-module load ncarenv/23.09 cuda/12.2.1 conda
+module load ncarenv/24.12 cuda/12.2.1 conda
 conda activate wx-afd
 
 export TMPDIR=/glade/derecho/scratch/$USER/tmpdir
