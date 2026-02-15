@@ -1,0 +1,87 @@
+# ============================================================
+# WX-AFD: Louisville AFD Generator — Axolotl Training Config
+# Model: Qwen3-4B-Instruct-2507
+# Method: DoRA + rsLoRA (rank 16), bf16
+# Data: 2,287 train / 121 val examples
+# Compute: NCAR Derecho A100 40GB (single GPU)
+# ============================================================
+
+base_model: Qwen/Qwen3-4B-Instruct-2507
+model_type: AutoModelForCausalLM
+tokenizer_type: AutoTokenizer
+trust_remote_code: true
+
+# Chat template
+chat_template: qwen3
+
+# Token overrides (CRITICAL — EOS must be <|im_end|>, PAD must differ)
+special_tokens:
+  eos_token: "<|im_end|>"
+  pad_token: "<|endoftext|>"
+
+# ---- Adapter Configuration ----
+adapter: lora
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_target_linear: true          # All linear layers (q,k,v,o,gate,up,down)
+peft_use_rslora: true             # Rank-stabilized scaling
+peft_use_dora: true               # Weight-decomposed LoRA
+
+# ---- Dataset ----
+datasets:
+  - path: /glade/derecho/scratch/$USER/wx-afd/data/train.jsonl
+    type: chat_template
+    roles_to_train:
+      - assistant                 # Loss only on AFD output, not weather input
+    train_on_eos: true            # Learn to stop generating
+
+val_set_size: 0                   # We use a pre-split val set
+test_datasets:
+  - path: /glade/derecho/scratch/$USER/wx-afd/data/val.jsonl
+    type: chat_template
+    roles_to_train:
+      - assistant
+
+# End-of-turn tokens (global, not per-dataset — per Axolotl docs)
+eot_tokens:
+  - "<|im_end|>"
+
+# ---- Training Hyperparameters ----
+num_epochs: 3
+micro_batch_size: 2               # Per-GPU batch size
+gradient_accumulation_steps: 8    # Effective batch size: 2 x 8 = 16
+learning_rate: 1.5e-4             # 10x higher than full FT (per Schulman 2025)
+lr_scheduler: cosine
+warmup_ratio: 0.05                # ~5% warmup
+weight_decay: 0.01
+optimizer: adamw_torch
+max_grad_norm: 1.0
+
+# ---- Precision & Performance ----
+bf16: true
+tf32: true
+gradient_checkpointing: true
+sample_packing: true              # Bin multiple examples per sequence
+pad_to_sequence_len: true
+sequence_len: 2048                # Covers 99%+ of our examples (~1,979 avg total)
+
+# ---- Saving & Evaluation ----
+output_dir: /glade/derecho/scratch/$USER/wx-afd/output
+save_strategy: steps
+save_steps: 100
+save_total_limit: 5
+eval_strategy: steps
+eval_steps: 100
+logging_steps: 10
+
+# ---- Early Stopping ----
+early_stopping_patience: 5        # Stop if val loss doesn't improve for 5 evals
+load_best_model_at_end: true
+metric_for_best_model: eval_loss
+
+# ---- Reproducibility ----
+seed: 42
+
+# ---- Derecho-specific ----
+flash_attention: true             # A100 supports FlashAttention-2
