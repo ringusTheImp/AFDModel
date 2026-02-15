@@ -62,7 +62,10 @@ pip install --quiet torch --index-url https://download.pytorch.org/whl/cu121
 pip install --quiet axolotl==0.14.0
 pip install --quiet flash-attn --no-build-isolation --no-cache-dir
 pip install --quiet rouge-score bert-score sacrebleu tqdm
+pip install --quiet ipykernel
+python -m ipykernel install --user --name "$CONDA_ENV" --display-name "Python (wx-afd)"
 echo "  Packages installed."
+echo "  Jupyter kernel '$CONDA_ENV' registered."
 
 # ---- 5. Directory structure ----
 echo ""
@@ -169,5 +172,5 @@ fi
 echo ""
 echo "=========================================="
 echo "  Setup complete!"
-echo "  Next: accelerate launch -m axolotl.cli.train configs/wx-afd-dora.yml"
+echo "  Next: Open 04_train.ipynb in JupyterHub and select the 'Python (wx-afd)' kernel"
 echo "=========================================="

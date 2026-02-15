@@ -327,14 +327,7 @@ python -c "import axolotl; print(axolotl.__version__)"
 
 ### Phase 3: Sanity Check (Day 1-2)
 
-Before running a real training job, validate everything works:
-
-```bash
-# Validate config and data loading (no training)
-accelerate launch -m axolotl.cli.train configs/wx-afd-dora.yml \
-    --debug \
-    --num_epochs 0
-```
+Open `04_train.ipynb` in JupyterHub (select the **Python (wx-afd)** kernel) and run the sanity check cells (Sections 1-3). These validate config normalization, dataset loading, token IDs, and loss masking without training.
 
 **Checklist before proceeding:**
 - [ ] Data loads without errors
@@ -347,10 +340,7 @@ accelerate launch -m axolotl.cli.train configs/wx-afd-dora.yml \
 
 ### Phase 4: Training (Days 2-3)
 
-```bash
-# Launch training
-accelerate launch -m axolotl.cli.train configs/wx-afd-dora.yml
-```
+Run the training cell (Section 4) in `04_train.ipynb`.
 
 **Expected timeline:**
 - ~2,287 examples ÷ effective batch 16 = ~143 steps/epoch
@@ -359,26 +349,11 @@ accelerate launch -m axolotl.cli.train configs/wx-afd-dora.yml
 - **Total: ~45-75 minutes of GPU time**
 - Early stopping may terminate after epoch 2
 
-The checkpoint saves every 100 steps protect against interruption. If training is interrupted, resume from latest checkpoint:
-
-```bash
-accelerate launch -m axolotl.cli.train configs/wx-afd-dora.yml \
-    --resume_from_checkpoint /glade/derecho/scratch/$USER/wx-afd/output/checkpoint-200
-```
+The checkpoint saves every 100 steps protect against interruption. If training is interrupted, re-run the training cell — Axolotl will resume from the latest checkpoint automatically.
 
 ### Phase 5: Merge & Export (Day 3)
 
-After training, merge the LoRA adapter back into the base model for clean inference:
-
-```bash
-# Merge adapter into base model
-accelerate launch -m axolotl.cli.merge_lora configs/wx-afd-dora.yml \
-    --lora_model_dir /glade/derecho/scratch/$USER/wx-afd/output
-
-# Copy to persistent storage
-cp -r /glade/derecho/scratch/$USER/wx-afd/output/merged \
-      /glade/work/$USER/wx-afd-model-v1/
-```
+Run the LoRA merge cells (Section 6) in `04_train.ipynb`. This merges the adapter back into the base model and copies it to persistent storage at `/glade/work/$USER/wx-afd-model-v1/`.
 
 The merged model is a standard HuggingFace model directory — loadable with `AutoModelForCausalLM.from_pretrained()` anywhere. No adapter loading required at inference.
 
@@ -448,23 +423,9 @@ python scripts/evaluate.py \
 
 The script generates AFDs for all validation examples, computes ROUGE-1/2/L, BERTScore, and format compliance, then saves results to `eval/<tag>/scores/metrics.json`.
 
-### 7.5 Evaluation Commands
+### 7.5 Evaluation
 
-```bash
-# Evaluate fine-tuned model
-python scripts/evaluate.py \
-    --model output/merged \
-    --val_data data/val.jsonl \
-    --tag finetuned \
-    --output_dir eval/finetuned
-
-# Evaluate zero-shot baseline (same model, no fine-tuning)
-python scripts/evaluate.py \
-    --model Qwen/Qwen3-4B-Instruct-2507 \
-    --val_data data/val.jsonl \
-    --tag zero-shot \
-    --output_dir eval/zero-shot
-```
+Run the evaluation cells (Section 8) in `04_train.ipynb`. This evaluates both the fine-tuned model and the zero-shot baseline on all validation examples, computing ROUGE-1/2/L, BERTScore, and format compliance.
 
 ### 7.6 Success Criteria
 
