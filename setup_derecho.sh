@@ -19,19 +19,24 @@ echo "=========================================="
 # ---- 1. Module loads ----
 echo ""
 echo ">>> Loading modules..."
-module purge
-module load ncarenv/24.12 cuda/12.2.1
+module --force purge
+module load ncarenv/24.12
+module load cuda/12.8.0
 module load conda
 echo "  Modules loaded."
 
 # ---- 2. Conda environment ----
 echo ""
 echo ">>> Setting up conda environment '$CONDA_ENV'..."
+
+# Ensure conda shell functions are available (needed in non-interactive shells)
+eval "$(conda shell.bash hook)"
+
 if conda env list | grep -q "^${CONDA_ENV} "; then
     echo "  Environment '$CONDA_ENV' already exists, skipping creation."
 else
     echo "  Creating environment '$CONDA_ENV' with Python 3.11..."
-    CONDA_OVERRIDE_CUDA=12.1 conda create -n "$CONDA_ENV" python=3.11 -y
+    conda create -n "$CONDA_ENV" python=3.11 -y
     echo "  Environment created."
 fi
 conda activate "$CONDA_ENV"
