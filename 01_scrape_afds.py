@@ -3,7 +3,7 @@
 Scrape Area Forecast Discussions for NWS Louisville (LMK) from IEM.
 
 Usage:
-    python 01_scrape_afds.py --start 2024-01-01 --end 2025-01-01
+    python 01_scrape_afds.py
 """
 import argparse
 import json
@@ -16,6 +16,9 @@ import requests
 from tqdm import tqdm
 
 IEM_URL = "https://mesonet.agron.iastate.edu/cgi-bin/afos/retrieve.py"
+
+START_DATE = "2024-01-01"
+END_DATE = "2026-01-01"
 
 MONTH_MAP = {
     "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
@@ -90,11 +93,9 @@ def scrape(office, start, end):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--office", default="LMK")
-    ap.add_argument("--start", required=True)
-    ap.add_argument("--end", required=True)
     args = ap.parse_args()
 
-    afds = scrape(args.office, args.start, args.end)
+    afds = scrape(args.office, START_DATE, END_DATE)
 
     Path("data").mkdir(exist_ok=True)
     outpath = Path(f"data/afds_{args.office.lower()}.jsonl")
