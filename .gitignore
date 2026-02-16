@@ -4,6 +4,8 @@ eval/
 __pycache__/
 .ipynb_checkpoints/
 .DS_Store
+.env
+env.txt
 *.log
 .venv/
 .pytest_cache/
