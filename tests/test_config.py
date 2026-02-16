@@ -65,13 +65,23 @@ def test_batch_size_not_both(cfg):
 # ── 4. batch_size divisible by micro_batch_size ──────────────────────────────
 
 def test_batch_size_divisibility(cfg):
-    assert "batch_size" in cfg, "batch_size is required"
-    assert "micro_batch_size" in cfg, "micro_batch_size is required when batch_size is set"
-    bs = cfg["batch_size"]
-    mbs = cfg["micro_batch_size"]
-    assert bs % mbs == 0, (
-        f"batch_size ({bs}) must be divisible by micro_batch_size ({mbs})"
+    has_batch = "batch_size" in cfg
+    has_grad_accum = "gradient_accumulation_steps" in cfg
+    assert has_batch or has_grad_accum, (
+        "Must set either batch_size or gradient_accumulation_steps"
     )
+    if has_batch:
+        assert "micro_batch_size" in cfg, "micro_batch_size is required when batch_size is set"
+        bs = cfg["batch_size"]
+        mbs = cfg["micro_batch_size"]
+        assert bs % mbs == 0, (
+            f"batch_size ({bs}) must be divisible by micro_batch_size ({mbs})"
+        )
+    if has_grad_accum:
+        ga = cfg["gradient_accumulation_steps"]
+        assert isinstance(ga, int) and ga > 0, (
+            f"gradient_accumulation_steps must be a positive integer, got {ga!r}"
+        )
 
 
 # ── 5. Boolean fields are actually bools ─────────────────────────────────────
