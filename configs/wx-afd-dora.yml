@@ -32,6 +32,7 @@ peft_use_dora: true               # Weight-decomposed LoRA
 datasets:
   - path: /glade/derecho/scratch/$USER/wx-afd/data/train.jsonl
     type: chat_template
+    field_messages: messages      # JSONL uses "messages" (Axolotl defaults to "conversations")
     roles_to_train:
       - assistant                 # Loss only on AFD output, not weather input
     train_on_eos: "last"          # Learn to stop generating
@@ -40,6 +41,7 @@ val_set_size: 0                   # We use a pre-split val set
 test_datasets:
   - path: /glade/derecho/scratch/$USER/wx-afd/data/val.jsonl
     type: chat_template
+    field_messages: messages
     roles_to_train:
       - assistant
 
