@@ -59,6 +59,7 @@ export TMPDIR="/glade/derecho/scratch/$USER/tmp"
 mkdir -p "$TMPDIR"
 
 pip install --quiet torch --index-url https://download.pytorch.org/whl/cu121
+pip install --quiet torchvision --index-url https://download.pytorch.org/whl/cu121
 pip install --quiet axolotl==0.14.0
 pip install --quiet flash-attn --no-build-isolation --no-cache-dir
 pip install --quiet rouge-score bert-score sacrebleu tqdm
@@ -134,6 +135,9 @@ print(f'PyTorch:       {torch.__version__}')
 print(f'CUDA avail:    {torch.cuda.is_available()}')
 if torch.cuda.is_available():
     print(f'GPU:           {torch.cuda.get_device_name(0)}')
+
+import torchvision
+print(f'Torchvision:   {torchvision.__version__}')
 
 import axolotl
 print(f'Axolotl:       {axolotl.__version__}')

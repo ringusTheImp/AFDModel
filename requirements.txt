@@ -1,6 +1,7 @@
 # WX-AFD dependencies
 # Note: flash-attn and Derecho-specific setup should use setup_derecho.sh
 torch
+torchvision
 transformers==5.0.0
 axolotl==0.14.0
 rouge-score==0.1.2
