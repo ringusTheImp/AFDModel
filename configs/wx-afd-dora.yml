@@ -2,7 +2,7 @@
 # WX-AFD: Louisville AFD Generator — Axolotl Training Config
 # Model: Qwen3-4B-Instruct-2507
 # Method: DoRA + rsLoRA (rank 16), bf16
-# Data: 2,287 train / 121 val examples
+# Data: 5,498 train / 290 val examples
 # Compute: NCAR Derecho A100 40GB (single GPU)
 # ============================================================
 
@@ -12,7 +12,7 @@ tokenizer_type: AutoTokenizer
 trust_remote_code: true
 
 # Chat template
-chat_template: qwen3
+chat_template: tokenizer_default
 
 # Token overrides (CRITICAL — EOS must be <|im_end|>, PAD must differ)
 special_tokens:
@@ -51,8 +51,8 @@ eot_tokens:
 
 # ---- Training Hyperparameters ----
 num_epochs: 3
-micro_batch_size: 2               # Per-GPU batch size
-gradient_accumulation_steps: 8    # Effective batch = micro_batch_size × grad_accum = 2 × 8 = 16
+micro_batch_size: 1               # Per-GPU batch size (1 needed for seq_len 6144 on A100 40GB)
+gradient_accumulation_steps: 16   # Effective batch = micro_batch_size × grad_accum = 1 × 16 = 16
 learning_rate: 1.5e-4             # 10x higher than full FT (per Schulman 2025)
 lr_scheduler: cosine
 warmup_ratio: 0.05                # ~5% warmup
@@ -66,7 +66,7 @@ tf32: true
 gradient_checkpointing: true
 sample_packing: true              # Bin multiple examples per sequence
 pad_to_sequence_len: true
-sequence_len: 2048                # Covers 99%+ of our examples (~1,979 avg total)
+sequence_len: 6144                # Covers 100% of examples (max 5226, ~918 token headroom)
 
 # ---- Saving & Evaluation ----
 output_dir: /glade/derecho/scratch/$USER/wx-afd/output

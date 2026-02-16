@@ -140,6 +140,31 @@ def test_dataset_structure(cfg):
             )
 
 
+# ── 8. field_messages must be set on chat_template datasets ────────────────
+
+def _all_chat_template_datasets(cfg):
+    """Yield (label, dataset_dict) for every chat_template dataset."""
+    for i, ds in enumerate(cfg.get("datasets", [])):
+        if ds.get("type") == "chat_template":
+            yield f"datasets[{i}]", ds
+    for i, ds in enumerate(cfg.get("test_datasets", [])):
+        if ds.get("type") == "chat_template":
+            yield f"test_datasets[{i}]", ds
+
+
+def test_field_messages_set_on_chat_template_datasets(cfg):
+    """Axolotl defaults to 'conversations' but our JSONL uses 'messages'.
+    Omitting field_messages causes ValueError: Messages is null."""
+    found_any = False
+    for label, ds in _all_chat_template_datasets(cfg):
+        found_any = True
+        assert "field_messages" in ds, (
+            f"{label} uses chat_template but missing field_messages — "
+            "Axolotl will look for 'conversations' instead of 'messages'"
+        )
+    assert found_any, "No chat_template datasets found — config may be misconfigured"
+
+
 # ── 8. EOS and PAD tokens must differ ────────────────────────────────────────
 
 def test_special_tokens_eos_differs_from_pad(cfg):

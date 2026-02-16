@@ -82,7 +82,7 @@ for f in train.jsonl val.jsonl; do
     src="$SOURCE_DIR/data/$f"
     dst="$WX_AFD_ROOT/data/$f"
     if [ -f "$src" ]; then
-        cp -n "$src" "$dst" 2>/dev/null && echo "  Copied $f" || echo "  $f already exists, skipped."
+        cp "$src" "$dst" && echo "  Copied $f"
     else
         echo "  WARNING: $src not found (run 03_build_dataset.py first)"
     fi
@@ -92,7 +92,7 @@ done
 src="$SOURCE_DIR/configs/wx-afd-dora.yml"
 dst="$WX_AFD_ROOT/configs/wx-afd-dora.yml"
 if [ -f "$src" ]; then
-    cp -n "$src" "$dst" 2>/dev/null && echo "  Copied wx-afd-dora.yml" || echo "  Config already exists, skipped."
+    cp "$src" "$dst" && echo "  Copied wx-afd-dora.yml"
 fi
 
 # Scripts
@@ -100,7 +100,7 @@ for f in evaluate.py generate.py; do
     src="$SOURCE_DIR/scripts/$f"
     dst="$WX_AFD_ROOT/scripts/$f"
     if [ -f "$src" ]; then
-        cp -n "$src" "$dst" 2>/dev/null && echo "  Copied $f" || echo "  $f already exists, skipped."
+        cp "$src" "$dst" && echo "  Copied $f"
     fi
 done
 
@@ -108,7 +108,7 @@ done
 src="$SOURCE_DIR/wx_afd.py"
 dst="$WX_AFD_ROOT/wx_afd.py"
 if [ -f "$src" ]; then
-    cp -n "$src" "$dst" 2>/dev/null && echo "  Copied wx_afd.py" || echo "  wx_afd.py already exists, skipped."
+    cp "$src" "$dst" && echo "  Copied wx_afd.py"
 fi
 
 # ---- 7. (Optional) Pre-download model ----
